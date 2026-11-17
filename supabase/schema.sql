@@ -1,6 +1,6 @@
 -- ========================================================
 -- RR BOUQUET — DATABASE SCHEMA & STORAGE SETUP (SUPABASE)
--- Jalankan query ini di menu: Supabase Dashboard -> SQL Editor
+-- Aman dijalankan berulang kali (Idempotent)
 -- ========================================================
 
 -- 1. Tabel Produk
@@ -18,16 +18,19 @@ create table if not exists public.products (
   includes text[] default array['Wrapping Waterproof', 'Gratis Kartu Ucapan']
 );
 
--- Aktifkan RLS (Row Level Security)
+-- Aktifkan RLS
 alter table public.products enable row level security;
 
--- Policy: Publik bisa melihat semua produk
+-- Hapus policy lama jika sudah ada agar tidak error 42710
+drop policy if exists "Allow public read on products" on public.products;
+drop policy if exists "Allow all operations for products" on public.products;
+
+-- Buat ulang policy
 create policy "Allow public read on products" 
   on public.products 
   for select 
   using (true);
 
--- Policy: Publik / Admin bisa menambah, mengedit, dan menghapus produk
 create policy "Allow all operations for products" 
   on public.products 
   for all 
@@ -35,7 +38,7 @@ create policy "Allow all operations for products"
   with check (true);
 
 
--- 2. Tabel Pengaturan Toko (Nomor WhatsApp & Sosmed)
+-- 2. Tabel Pengaturan Toko
 create table if not exists public.store_settings (
   key text primary key,
   value text not null,
@@ -43,6 +46,9 @@ create table if not exists public.store_settings (
 );
 
 alter table public.store_settings enable row level security;
+
+drop policy if exists "Allow public read on store_settings" on public.store_settings;
+drop policy if exists "Allow all operations for store_settings" on public.store_settings;
 
 create policy "Allow public read on store_settings" 
   on public.store_settings 
@@ -68,13 +74,15 @@ insert into storage.buckets (id, name, public)
 values ('bouquets', 'bouquets', true)
 on conflict (id) do update set public = true;
 
--- Policy Storage: Publik bisa melihat foto
+drop policy if exists "Public Access to Bouquets Bucket" on storage.objects;
+drop policy if exists "Allow upload to Bouquets Bucket" on storage.objects;
+drop policy if exists "Allow update and delete to Bouquets Bucket" on storage.objects;
+
 create policy "Public Access to Bouquets Bucket" 
   on storage.objects 
   for select 
   using (bucket_id = 'bouquets');
 
--- Policy Storage: Publik / Admin bisa mengunggah foto
 create policy "Allow upload to Bouquets Bucket" 
   on storage.objects 
   for insert 
@@ -84,3 +92,13 @@ create policy "Allow update and delete to Bouquets Bucket"
   on storage.objects 
   for delete 
   using (bucket_id = 'bouquets');
+
+
+-- 4. Masukkan Data Produk Awal (Opsional)
+insert into public.products (name, slug, price, category, description, image_url, is_bestseller, size)
+values 
+  ('Classic Pastel Rose Bouquet', 'classic-pastel-rose', 185000, 'Buket Romantis / Anniversary', 'Rangkaian mawar premium bernuansa pastel lembut dipadukan dengan daun eucalyptus dan kertas wrapping Korean style tahan air.', 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=800&q=80', true, 'Medium'),
+  ('Graduation Sunshine Bloom', 'graduation-sunshine-bloom', 165000, 'Buket Wisuda & Sidang', 'Pilihan favorit untuk perayaan wisuda dan sidang! Kombinasi bunga matahari segar dan aksen pita satin elegan.', 'https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=800&q=80', true, 'Medium'),
+  ('Sweet Peach Romantic Symphony', 'sweet-peach-romantic', 245000, 'Buket Romantis / Anniversary', 'Kombinasi mewah bunga mawar peach, carnation, dan aster impor untuk hadiah hari jadi, ulang tahun, atau lamaran.', 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80', true, 'Large'),
+  ('Snack & Chocolate Tower Bouquet', 'snack-chocolate-tower', 145000, 'Buket Snack & Uang', 'Buket kombinasi cokelat premium dan camilan favorit yang disusun rapi serta estetik.', 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80', true, 'Medium')
+on conflict do nothing;
