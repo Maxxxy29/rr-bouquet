@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, Heart, ShieldCheck, Clock } from 'lucide-react';
 import { WhatsAppIcon } from '../components/WhatsAppIcon';
@@ -8,12 +8,24 @@ import { TestimonialSlider } from '../components/TestimonialSlider';
 import { INITIAL_PRODUCTS, INITIAL_TESTIMONIALS } from '../data/mockData';
 import type { Product } from '../types';
 import { getWhatsAppGeneralUrl, getWhatsAppCustomOrderUrl } from '../config/site';
+import { getProducts } from '../lib/supabase';
 
 export const HomePage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+
+  useEffect(() => {
+    async function load() {
+      const data = await getProducts();
+      if (data && data.length > 0) {
+        setProducts(data);
+      }
+    }
+    load();
+  }, []);
 
   // Filter 4 bestseller products as shown in wireframe
-  const bestsellers = INITIAL_PRODUCTS.filter((p) => p.isBestseller).slice(0, 4);
+  const bestsellers = products.filter((p) => p.isBestseller).slice(0, 4);
 
   return (
     <div className="flex flex-col min-h-screen">

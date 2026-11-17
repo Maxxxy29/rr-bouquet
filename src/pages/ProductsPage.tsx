@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Sparkles } from 'lucide-react';
 import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { ProductCard } from '../components/ProductCard';
@@ -6,16 +6,28 @@ import { ProductDetailModal } from '../components/ProductDetailModal';
 import { INITIAL_PRODUCTS, CATEGORIES } from '../data/mockData';
 import type { Product } from '../types';
 import { getWhatsAppCustomOrderUrl } from '../config/site';
+import { getProducts } from '../lib/supabase';
 
 export const ProductsPage: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc'>('featured');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  useEffect(() => {
+    async function load() {
+      const data = await getProducts();
+      if (data && data.length > 0) {
+        setProducts(data);
+      }
+    }
+    load();
+  }, []);
+
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    return INITIAL_PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       const matchCategory =
         selectedCategory === 'Semua' || product.category === selectedCategory;
       const matchSearch =
